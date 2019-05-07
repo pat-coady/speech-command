@@ -1,5 +1,6 @@
 """
 Construct tf.data.Dataset from Kaggle KWS Dataset:
+https://www.kaggle.com/c/tensorflow-speech-recognition-challenge
 
 by: Patrick Coady
 """
@@ -7,21 +8,6 @@ import tensorflow as tf
 import glob
 
 
-# from: https://www.tensorflow.org/alpha/tutorials/load_data/tf_records
-def _bytes_feature(value):
-    """Returns a bytes_list from a string / byte."""
-    if isinstance(value, type(tf.constant(0))):
-        print(value)
-        value = value.numpy()  # BytesList won't unpack a string from an EagerTensor.
-    return tf.train.Feature(bytes_list=tf.train.BytesList(value=[value]))
-
-
-def _int64_feature(value):
-    """Returns an int64_list from a bool / enum / int / uint."""
-    return tf.train.Feature(int64_list=tf.train.Int64List(value=[value]))
-
-
-# Start of my code
 def decode(example):
     """Parses an image and depth map from the given `serialized_example`."""
     feature_description = {
@@ -56,7 +42,9 @@ def build_dataset(mode):
     filenames.sort()  # deterministic ordering
     ds_filenames = tf.data.Dataset.from_tensor_slices(tf.constant(filenames))
 
-    ds_filenames = ds_filenames.shuffle(len(filenames), reshuffle_each_iteration=True)
+    if mode == 'train':
+        ds_filenames = ds_filenames.shuffle(len(filenames),
+                                            reshuffle_each_iteration=True)
     M = tf.signal.linear_to_mel_weight_matrix(
         num_mel_bins=30,
         num_spectrogram_bins=257,
@@ -66,6 +54,8 @@ def build_dataset(mode):
     ds = tf.data.TFRecordDataset(ds_filenames, num_parallel_reads=6)
     ds = ds.map(decode, num_parallel_calls=4)
     ds = ds.map(lambda x, y: transform_fn(x, y, M))
+    if mode == 'train':
+        ds = ds.shuffle(1024)
     ds = ds.batch(64)
     ds = ds.prefetch(2)
 
