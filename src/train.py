@@ -98,7 +98,6 @@ def main():
     loss = tf.losses.SparseCategoricalCrossentropy(from_logits=True)
     optimizer = tf.optimizers.Adam()
     model.compile(loss=loss, optimizer=optimizer, metrics=['accuracy'])
-    ckpt_path, _ = logpaths()
     callbacks = build_callbacks()
     model.fit(x=ds_train, validation_data=ds_val, epochs=10,
               callbacks=callbacks)
