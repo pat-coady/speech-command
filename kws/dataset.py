@@ -15,11 +15,13 @@ def decode(example):
         'y': tf.io.FixedLenFeature([], tf.int64, default_value=0)
     }
     example = tf.io.parse_single_example(example, feature_description)
-    kw_samples = tf.io.parse_tensor(example['x'], out_type=tf.float32)
-    kw_samples = tf.reshape(kw_samples, (61, 40, 1))
-    kw_class = tf.cast(example['y'], tf.int32)
+    x = tf.io.parse_tensor(example['x'], out_type=tf.float32)
+    x = tf.reshape(x, (61, 40, 1))
+    x = tf.clip_by_value(x, -10.0, 5.0)
+    x = (x + 2.5) / 7.5
+    y = tf.cast(example['y'], tf.int32)
 
-    return kw_samples, kw_class
+    return x, y
 
 
 def build_filelist(ds_type, mode):
@@ -38,7 +40,7 @@ def build_dataset(ds_type, mode):
     ds = ds.map(decode, num_parallel_calls=8)
     if mode == 'train':
         ds = ds.shuffle(1024)
-    ds = ds.batch(128)
+    ds = ds.batch(64)
     ds = ds.prefetch(4)
 
     return ds

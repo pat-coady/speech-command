@@ -18,37 +18,14 @@ in about 10 minutes.
 
 by: Patrick Coady
 """
+import tensorflow as tf
 from tensorflow import keras
-from build_dataset import *
+from dataset import build_dataset
+from model import cnn
 import time
 import os
 import shutil
 import glob
-
-
-def conv(x, filters):
-    return keras.layers.Conv2D(filters, (3, 3), padding='same',
-                               activation='relu6',
-                               kernel_initializer='he_uniform')(x)
-
-
-def pool(x):
-    return keras.layers.MaxPool2D((2, 2))(x)
-
-
-def build_model():
-    # TODO - Remove hard-coded shape:
-    x = keras.Input(shape=(61, 40, 1), name='input')
-    y = conv(x, 16)
-    y = conv(y, 16)
-    y = pool(y)
-    y = conv(y, 32)
-    y = conv(y, 32)
-    y = pool(y)
-    y = conv(y, 30)
-    y = tf.keras.layers.GlobalAveragePooling2D()(y)
-
-    return keras.Model(x, y)
 
 
 def logpaths():
@@ -84,20 +61,22 @@ def build_callbacks():
                                          verbose=True)
     callbacks.append(cb)
     cb = keras.callbacks.TensorBoard(tblog_path, histogram_freq=1,
-                                     update_freq=1000)
+                                     update_freq=100)
     callbacks.append(cb)
 
     return callbacks
 
 
 def main():
-    model = build_model()
+    model = cnn()
     with tf.device('/cpu:0'):  # put data pipeline on CPU
-        ds_train = build_dataset('train')
-        ds_val = build_dataset('val')
+        ds_type = 'log-mel-spec'
+        ds_train = build_dataset(ds_type, 'train')
+        ds_val = build_dataset(ds_type, 'val')
     loss = tf.losses.SparseCategoricalCrossentropy(from_logits=True)
     optimizer = tf.optimizers.Adam()
-    model.compile(loss=loss, optimizer=optimizer, metrics=['accuracy'])
+    model.compile(loss=loss, optimizer=optimizer, metrics=['accuracy'],
+                  )
     callbacks = build_callbacks()
     model.fit(x=ds_train, validation_data=ds_val, epochs=10,
               callbacks=callbacks)
