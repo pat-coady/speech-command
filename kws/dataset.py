@@ -38,14 +38,14 @@ def decode(example, ds_type):
 
 
 def build_filelist(ds_type, mode):
-    path = Path.home() / 'Data' / 'kws' / 'TFRecords' / ds_type
+    path = Path.home() / 'Data' / 'kws' / 'tfrecords' / ds_type
     filenames = path.rglob('{}_*.tfr'.format(mode))
 
     return list(map(lambda fn: str(fn), filenames))
 
 
-def build_dataset(ds_type, mode):
-    filenames = build_filelist(ds_type, mode)
+def build_dataset(config, mode):
+    filenames = build_filelist(config['ds_type'], mode)
     filenames.sort()  # deterministic ordering
     ds_filenames = tf.data.Dataset.from_tensor_slices(tf.constant(filenames))
 
@@ -53,10 +53,11 @@ def build_dataset(ds_type, mode):
         ds_filenames = ds_filenames.shuffle(len(filenames),
                                             reshuffle_each_iteration=True)
     ds = tf.data.TFRecordDataset(ds_filenames, num_parallel_reads=8)
-    ds = ds.map(lambda example: decode(example, ds_type), num_parallel_calls=8)
+    ds = ds.map(lambda example: decode(example, config['ds_type']),
+                num_parallel_calls=8)
     if mode == 'train':
         ds = ds.shuffle(1024)
-    ds = ds.batch(64)
+    ds = ds.batch(config['batch_sz'])
     ds = ds.prefetch(4)
 
     return ds

@@ -7,7 +7,7 @@ from tensorflow import keras
 def conv2d(x, filters):
     y = keras.layers.Conv2D(filters, (3, 3), padding='same',
                             kernel_initializer='he_uniform')(x)
-    return keras.activations.relu(y, max_value=6.0)
+    return keras.activations.relu(y)
 
 
 def conv2d_bn(x, filters):
@@ -21,14 +21,18 @@ def pool(x):
     return keras.layers.MaxPool2D((2, 2))(x)
 
 
-def cnn(batch_norm=False):
-    if batch_norm:
+def cnn(config):
+    if config['batch_norm']:
         conv = conv2d_bn
     else:
         conv = conv2d
     x = keras.Input(shape=(None, 40, 1), name='input')
-    y = keras.layers.Conv2D(4, (3, 40), padding='same',
-                            kernel_initializer='he_uniform')(x)
+    if config['tall_conv']:
+        y = keras.layers.Conv2D(40, (1, 40), padding='valid',
+                                kernel_initializer='he_uniform')(x)
+        y = keras.layers.Reshape((None, 40, 1), input_shape=(100, 1, 40))(y)
+        # TODO - Activation?
+        # x = keras.activations.relu(x)
     y = conv(y, 16)
     y = conv(y, 16)
     y = pool(y)

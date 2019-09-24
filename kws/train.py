@@ -15,8 +15,6 @@ Very first training attempt reached 90% accuracy on the validation
 set with no bells or whistles (i.e. batch norm, data augmentation,
 residual layers, ...). Just a plain-old CNN. Trained on a macbook
 in about 10 minutes.
-
-by: Patrick Coady
 """
 import tensorflow as tf
 from tensorflow import keras
@@ -26,22 +24,20 @@ import time
 import os
 import shutil
 import glob
+import argparse
 
 
-def logpaths():
+def logpaths(config):
     """Build training log paths for checkpoints and TensorBoard data
 
     Returns:
         (ckpt_path, tblog_path)
     """
-    model_name = 'simple_conv'
-    tag = 'default'
+    tag = config['tag']
     logdir = time.strftime("run_%Y_%m_%d-%H_%M_%S/")
 
-    ckpt_path = ('../outputs/checkpoints/' + model_name + '/'
-                 + tag)
-    tblog_path = ('../outputs/tb_logs/' + model_name + '/'
-                  + tag + '/' + logdir)
+    ckpt_path = '../outputs/checkpoints/{}'.format(tag)
+    tblog_path = '../outputs/tb_logs/{}/{}'.format(tag, logdir)
 
     if not os.path.isdir(ckpt_path):
         os.makedirs(ckpt_path)
@@ -52,9 +48,9 @@ def logpaths():
     return ckpt_path, tblog_path
 
 
-def build_callbacks():
+def build_callbacks(config):
     """Various callbacks, e.g. Tensorboard, checkpoints"""
-    ckpt_path, tblog_path = logpaths()
+    ckpt_path, tblog_path = logpaths(config)
     callbacks = []
     cb = keras.callbacks.ModelCheckpoint(ckpt_path + '/cp-{epoch:04d}.ckpt',
                                          save_weights_only=True,
@@ -67,20 +63,47 @@ def build_callbacks():
     return callbacks
 
 
-def main():
-    model = cnn(batch_norm=True)
+def main(config):
+    model = cnn(config)
     with tf.device('/cpu:0'):  # put data pipeline on CPU
-        # ds_type = 'cpc-enc'
-        ds_type = 'log-mel-spec'
-        ds_train = build_dataset(ds_type, 'train')
-        ds_val = build_dataset(ds_type, 'val')
+        ds_train = build_dataset(config, 'train')
+        ds_val = build_dataset(config, 'val')
     loss = tf.losses.SparseCategoricalCrossentropy(from_logits=True)
-    optimizer = tf.optimizers.Adam()
-    model.compile(loss=loss, optimizer=optimizer, metrics=['accuracy'])
-    callbacks = build_callbacks()
-    model.fit(x=ds_train, validation_data=ds_val, epochs=10,
+    model.compile(loss=loss, optimizer=config['optimizer'], metrics=['accuracy'])
+    callbacks = build_callbacks(config)
+    model.fit(x=ds_train, validation_data=ds_val, epochs=config['epochs'],
               callbacks=callbacks, validation_steps=90)
 
 
 if __name__ == "__main__":
-    main()
+    parser = argparse.ArgumentParser(description='Train model.')
+    parser.add_argument(
+        '-t', '--tag', type=str,
+        help='Tag for the training run (default = "default")',
+        default='default')
+    parser.add_argument(
+        '-e', '--epochs', type=int,
+        help='Number of epochs (default=15)',
+        default=15)
+    parser.add_argument(
+        '-b', '--batch_sz', type=int,
+        help='Batch size (default=64)',
+        default=64)
+    parser.add_argument(
+        '-ds', '--ds_type', type=str,
+        help='Choose "log-mel-spec" or "cpc-enc".',
+        default='log-mel-spec')
+    parser.add_argument(
+        '--optimizer', type=str,
+        help='Choose optimizer: "adam" or "sgd_mom". (default=adam)',
+        default='adam')
+    parser.add_argument(
+        '-bn', '--batch_norm', action='store_true',
+        help='Enable batch normalization.')
+    parser.set_defaults(batch_norm=False)
+    parser.add_argument(
+        '-tc', '--tall_conv', action='store_true',
+        help='Enable 40x3x4 first layer convolution.')
+    parser.set_defaults(batch_norm=False)
+
+    main(vars(parser.parse_args()))

@@ -3,8 +3,6 @@
 Encode audio sample data using learned Contrastive Predictive Coding.
 
 Input: `TFRecords/samples/*.tfr`, Output `TFRecords/cpc-enc/*.tfr`
-
-by: Patrick Coady
 """
 import tensorflow as tf
 import dataset
@@ -30,7 +28,7 @@ class MyTFRWriter(object):
     def __init__(self, mode, ds_type, shard_size=256):
         self.mode = mode
         self.shard_size = shard_size
-        path = Path.home() / 'Data' / 'kws' / 'TFRecords' / ds_type
+        path = Path.home() / 'Data' / 'kws' / 'tfrecords' / ds_type
         path.mkdir(parents=True, exist_ok=True)
         self.path = str(path)
         self.count = 0
@@ -49,7 +47,7 @@ class MyTFRWriter(object):
         self.writer.close()
 
     def _tfr_name(self):
-        tfr_name = Path(self.path) / (self.mode + '_{:04d}.tfr'.format(self.shard_num))
+        tfr_name = Path(self.path) / '{}_{:04d}.tfr'.format(self.mode, self.shard_num)
         return str(tfr_name)
 
 
@@ -65,15 +63,16 @@ def serialized_example(x, y):
 
 def main():
     dim_z = 40  # dimension of latent embedding space
-    ds_type = 'cpc-enc'
     genc = models.genc_model(dim_z=dim_z)
     zeros = np.zeros((64, 16000), dtype=np.float32)
     genc(zeros)  # send dummy batch through model to force Model.build()
     genc.load_weights(str(Path.cwd() / 'genc.h5'))
-
+    config = {'batch_sz': 64,
+              'ds_type': 'samples',
+              }
     for mode in ['train', 'val', 'test']:
-        writer = MyTFRWriter(mode, ds_type)
-        ds = dataset.build_dataset(ds_type='samples', mode=mode)
+        writer = MyTFRWriter(mode, 'cpc-enc')
+        ds = dataset.build_dataset(config, mode=mode)
         for batch in ds:
             x, y = batch
             x = genc(x)  # shape = (batch_sz, 100, dim_z)
@@ -81,7 +80,6 @@ def main():
                 example = serialized_example(x[idx, ...], y[idx])
                 writer.write(example)
         writer.close()
-    print(x.shape)
 
 
 if __name__ == "__main__":

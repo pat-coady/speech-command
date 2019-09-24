@@ -3,15 +3,13 @@
 Build training and validation sets in TFRecord format.
 
 30 classes (keywords), no unknown or background_noise class for now.
-
-by: Patrick Coady
 """
 import tensorflow as tf
 import hashlib
 import os
 import re
-import glob
 import random
+from pathlib import Path
 
 
 # from: https://www.tensorflow.org/alpha/tutorials/load_data/tf_records
@@ -81,15 +79,18 @@ def which_set(filename, validation_percentage=10, testing_percentage=10):
 # Start of my code
 def get_all_filenames():
     """Return list of all training files except '_background_noise_"""
-    filenames = glob.glob('../data/train/audio/*/*.wav')
+    path = Path.home() / 'Data' / 'kws' / 'train' / 'audio'
+    filenames = path.rglob('*.wav')
+    filenames = map(lambda fn: str(fn), filenames)
 
     return list(filter(lambda x: 'background' not in x, filenames))
 
 
 def build_class_dict():
     """Key = class (str), value = integer (0 to num_classes-1)."""
-    folders = glob.glob('../data/train/audio/*')
-    folders = map(lambda x: x.split('/')[-1], folders)
+    path = Path.home() / 'Data' / 'kws' / 'train' / 'audio'
+    folders = path.glob('*')
+    folders = map(lambda x: x.stem, folders)
     folders = list(filter(lambda x: 'background' not in x, folders))
     folders.sort()
     class_dict = {}
@@ -107,12 +108,13 @@ def get_class_int(filename, class_dict):
 
 
 class MyTFRWriter(object):
-    def __init__(self, basename, mode, shard_size=256):
-        self.basename = basename
+    def __init__(self, data_type, mode, shard_size=256):
+        self.data_type = data_type
+        self.mode = mode
         self.shard_size = shard_size
-        self.path = '../data/TFRecords/{}/'.format(mode)
-        if not os.path.isdir(self.path):
-            os.makedirs(self.path)
+        path = Path.home() / 'Data' / 'kws' / 'tfrecords' / data_type
+        path.mkdir(parents=True, exist_ok=True)
+        self.path = str(path)
         self.count = 0
         self.shard_num = 0
         self.writer = tf.io.TFRecordWriter(self._tfr_name())
@@ -129,7 +131,8 @@ class MyTFRWriter(object):
         self.writer.close()
 
     def _tfr_name(self):
-        return self.path + self.basename + '_{:04d}.tfr'.format(self.shard_num)
+        path = Path(self.path) / '{}_{:04d}.tfr'.format(self.mode, self.shard_num)
+        return str(path)
 
 
 def serialized_example(x, y):
@@ -151,7 +154,7 @@ def to_log_mel_spectro(samples, M):
 
 def main():
     #  valid mode choices 'samples', 'log-mel-spec', 'mfcc'
-    mode = 'samples'
+    data_type = 'log-mel-spec'
     M = tf.signal.linear_to_mel_weight_matrix(
         num_mel_bins=40,
         num_spectrogram_bins=257,
@@ -162,16 +165,17 @@ def main():
     filenames = get_all_filenames()
     random.seed(0)
     random.shuffle(filenames)
-    writers = {x: MyTFRWriter(x, mode) for x in ['train', 'val', 'test']}
+    writers = {mode: MyTFRWriter(data_type=data_type, mode=mode)
+               for mode in ['train', 'val', 'test']}
     for filename in filenames:
         rawdata = tf.io.read_file(filename)
         kw_samples = tf.audio.decode_wav(rawdata).audio
         if kw_samples.shape[0] != 16000:
             continue  # only load examples with exactly 16ksamples (i.e. 1second)
         x = kw_samples  # default to samples
-        if mode == 'log-mel-spec':
+        if data_type == 'log-mel-spec':
             x = to_log_mel_spectro(kw_samples, M)
-        elif mode == 'mfcc':
+        elif data_type == 'mfcc':
             x = to_log_mel_spectro(kw_samples, M)
             x = tf.signal.mfccs_from_log_mel_spectrograms(x)
         y = get_class_int(filename, class_dict)
