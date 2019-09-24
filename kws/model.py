@@ -1,7 +1,6 @@
 """
 Models
 """
-import tensorflow as tf
 from tensorflow import keras
 
 
@@ -27,9 +26,10 @@ def cnn(batch_norm=False):
         conv = conv2d_bn
     else:
         conv = conv2d
-    # TODO - Remove hard-coded shape:
-    x = keras.Input(shape=(61, 40, 1), name='input')
-    y = conv(x, 16)
+    x = keras.Input(shape=(None, 40, 1), name='input')
+    y = keras.layers.Conv2D(4, (3, 40), padding='same',
+                            kernel_initializer='he_uniform')(x)
+    y = conv(y, 16)
     y = conv(y, 16)
     y = pool(y)
     y = conv(y, 32)

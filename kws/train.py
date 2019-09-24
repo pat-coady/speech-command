@@ -68,18 +68,18 @@ def build_callbacks():
 
 
 def main():
-    model = cnn()
+    model = cnn(batch_norm=True)
     with tf.device('/cpu:0'):  # put data pipeline on CPU
+        # ds_type = 'cpc-enc'
         ds_type = 'log-mel-spec'
         ds_train = build_dataset(ds_type, 'train')
         ds_val = build_dataset(ds_type, 'val')
     loss = tf.losses.SparseCategoricalCrossentropy(from_logits=True)
     optimizer = tf.optimizers.Adam()
-    model.compile(loss=loss, optimizer=optimizer, metrics=['accuracy'],
-                  )
+    model.compile(loss=loss, optimizer=optimizer, metrics=['accuracy'])
     callbacks = build_callbacks()
     model.fit(x=ds_train, validation_data=ds_val, epochs=10,
-              callbacks=callbacks)
+              callbacks=callbacks, validation_steps=90)
 
 
 if __name__ == "__main__":
