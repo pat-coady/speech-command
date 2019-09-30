@@ -1,7 +1,7 @@
 .idea/
-logs/
+.DS_Store
+kws.egg-info/
+kws/.ipynb_checkpoints/
+kws/__pycache__/
+notebooks/.ipynb_checkpoints/
 outputs/
-replearn.egg-info/
-replearn/.ipynb_checkpoints/
-replearn/__pycache__/
-
