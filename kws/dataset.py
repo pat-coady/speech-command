@@ -2,8 +2,6 @@
 Construct tf.data.Dataset from processed Kaggle KWS data.
 
 TFRecords built by tfrecords.py.
-
-by: Patrick Coady
 """
 import tensorflow as tf
 from pathlib import Path
@@ -11,6 +9,7 @@ from pathlib import Path
 
 def decode(example, ds_type):
     """Parses example from `serialized_example`."""
+    epsilon = 1e-5
     feature_description = {
         'x': tf.io.FixedLenFeature([], tf.string, default_value=''),
         'y': tf.io.FixedLenFeature([], tf.int64, default_value=0)
@@ -23,7 +22,7 @@ def decode(example, ds_type):
         max_x = tf.reduce_max(x)
         min_x = tf.reduce_min(x)
         scale = tf.maximum(-min_x, max_x)
-        x = x / scale
+        x = x / (scale + epsilon)
     elif ds_type in ['mfcc', 'log-mel-spec']:
         x = tf.reshape(x, (61, 40, 1))
         x = tf.clip_by_value(x, -10.0, 5.0)

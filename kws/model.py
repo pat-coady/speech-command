@@ -2,6 +2,7 @@
 Models
 """
 from tensorflow import keras
+from replearn.models import genc_model
 
 
 def conv2d(x, filters):
@@ -26,14 +27,16 @@ def cnn(config):
         conv = conv2d_bn
     else:
         conv = conv2d
-    x = keras.Input(shape=(None, 40, 1), name='input')
-    if config['tall_conv']:
-        y = keras.layers.Conv2D(40, (1, 40), padding='valid',
-                                kernel_initializer='he_uniform')(x)
-        y = keras.layers.Reshape((None, 40, 1), input_shape=(100, 1, 40))(y)
-        # TODO - Activation?
-        # x = keras.activations.relu(x)
-    y = conv(y, 16)
+    if config['ds_type'] == 'samples':
+        x = keras.Input(shape=(16000,), name='input')
+        genc = genc_model(dim_z=40)
+        y = genc(x)
+        y = keras.layers.Reshape((-1, 40, 1))(y)
+        y = keras.layers.Cropping2D(((5, 0), (0, 0)))(y)
+        y = conv(y, 16)
+    else:
+        x = keras.Input(shape=(None, 40, 1), name='input')
+        y = conv(x, 16)
     y = conv(y, 16)
     y = pool(y)
     y = conv(y, 32)
@@ -42,5 +45,38 @@ def cnn(config):
     y = conv(y, 64)
     y = conv(y, 30)
     y = keras.layers.GlobalAveragePooling2D()(y)
+
+    return keras.Model(x, y)
+
+
+def dense_conv(config):
+    if config['ds_type'] == 'samples':
+        x = keras.Input(shape=(16000,), name='input')
+        genc = genc_model(dim_z=40)
+        y = genc(x)
+        y = keras.layers.Reshape((-1, 40, 1))(y)
+        y = keras.layers.Cropping2D(((5, 0), (0, 0)))(y)
+        y = keras.layers.Conv2D(80, (3, 40), (2, 1), padding='valid',
+                                kernel_initializer='he_uniform',
+                                activation='relu')(y)
+    else:
+        x = keras.Input(shape=(None, 40, 1), name='input')
+        y = keras.layers.Conv2D(80, (3, 40), (2, 1), padding='valid',
+                                kernel_initializer='he_uniform',
+                                activation='relu')(x)
+    y = keras.layers.Conv2D(160, (3, 1), (2, 1), padding='valid',
+                            kernel_initializer='he_uniform',
+                            activation='relu')(y)
+    y = keras.layers.Conv2D(160, (3, 1), (2, 1), padding='valid',
+                            kernel_initializer='he_uniform',
+                            activation='relu')(y)
+    if config['dense_final']:
+        y = keras.layers.Flatten()(y)
+        y = keras.layers.Dense(90, 'relu', kernel_initializer='he_uniform')(y)
+        y = keras.layers.Dense(30, kernel_initializer='he_uniform')(y)
+    else:
+        y = keras.layers.Conv2D(30, (3, 1), (2, 1), padding='valid',
+                                kernel_initializer='he_uniform')(y)
+        y = keras.layers.GlobalAveragePooling2D()(y)
 
     return keras.Model(x, y)

@@ -11,15 +11,15 @@ with 32ms frames and 16ms overlap. The resulting spectrogram is
 a 61x30 "image". The spectrograms are fed into a CNN, with global
 average pooling as the final output layer.
 
-Very first training attempt reached 90% accuracy on the validation
-set with no bells or whistles (i.e. batch norm, data augmentation,
-residual layers, ...). Just a plain-old CNN. Trained on a macbook
-in about 10 minutes.
+See tfrecords.py for dataset preparation.
+
+Update: add provision to take audio encoded using network trained with
+    Contrastive Predictive Coding.
 """
 import tensorflow as tf
 from tensorflow import keras
 from dataset import build_dataset
-from model import cnn
+from model import cnn, dense_conv
 import time
 import os
 import shutil
@@ -28,10 +28,13 @@ import argparse
 
 
 def logpaths(config):
-    """Build training log paths for checkpoints and TensorBoard data
+    """
+    Build training log paths for checkpoints and TensorBoard data. TensorBoard
+    tb_logs directories are time-stamped to keep them unique.
 
     Returns:
-        (ckpt_path, tblog_path)
+        ckpt_path (str)
+        tblog_path (str)
     """
     tag = config['tag']
     logdir = time.strftime("run_%Y_%m_%d-%H_%M_%S/")
@@ -63,16 +66,30 @@ def build_callbacks(config):
     return callbacks
 
 
+def get_optimizer(config):
+    if config['optimizer'] == 'adam':
+        return tf.optimizers.Adam(config['lr'])
+    if config['optimizer'] == 'sgd':
+        return tf.optimizers.SGD(config['lr'],
+                                 momentum=config['momentum'],
+                                 nesterov=True)
+
+
 def main(config):
-    model = cnn(config)
+    if config['dense_conv']:
+        model = dense_conv(config)
+    else:
+        model = cnn(config)
     with tf.device('/cpu:0'):  # put data pipeline on CPU
         ds_train = build_dataset(config, 'train')
         ds_val = build_dataset(config, 'val')
     loss = tf.losses.SparseCategoricalCrossentropy(from_logits=True)
-    model.compile(loss=loss, optimizer=config['optimizer'], metrics=['accuracy'])
+    optimizer = get_optimizer(config)
+    model.compile(loss=loss, optimizer=optimizer, metrics=['accuracy'])
     callbacks = build_callbacks(config)
     model.fit(x=ds_train, validation_data=ds_val, epochs=config['epochs'],
               callbacks=callbacks, validation_steps=90)
+    print(model.summary())
 
 
 if __name__ == "__main__":
@@ -82,28 +99,40 @@ if __name__ == "__main__":
         help='Tag for the training run (default = "default")',
         default='default')
     parser.add_argument(
+        '-lr', '--lr', type=float,
+        help='Learning rate (default=0.001)',
+        default=0.001)
+    parser.add_argument(
+        '-m', '--momentum', type=float,
+        help='Momentum (default=0.9)',
+        default=0.9)
+    parser.add_argument(
         '-e', '--epochs', type=int,
         help='Number of epochs (default=15)',
-        default=15)
+        default=25)
     parser.add_argument(
         '-b', '--batch_sz', type=int,
         help='Batch size (default=64)',
         default=64)
     parser.add_argument(
         '-ds', '--ds_type', type=str,
-        help='Choose "log-mel-spec" or "cpc-enc".',
+        help='Choose "log-mel-spec", "cpc-enc" or "samples".',
         default='log-mel-spec')
     parser.add_argument(
         '--optimizer', type=str,
-        help='Choose optimizer: "adam" or "sgd_mom". (default=adam)',
+        help='Choose optimizer: "adam" or "sgd". (default=adam)',
         default='adam')
     parser.add_argument(
         '-bn', '--batch_norm', action='store_true',
         help='Enable batch normalization.')
     parser.set_defaults(batch_norm=False)
     parser.add_argument(
-        '-tc', '--tall_conv', action='store_true',
-        help='Enable 40x3x4 first layer convolution.')
-    parser.set_defaults(batch_norm=False)
+        '-dc', '--dense_conv', action='store_true',
+        help='Convolve with fully connected filters covering T=3 input steps.')
+    parser.set_defaults(dense_conv=False)
+    parser.add_argument(
+        '-df', '--dense_final', action='store_true',
+        help='Use dense layer as final output instead of Global Average Pool.')
+    parser.set_defaults(dense_final=False)
 
     main(vars(parser.parse_args()))
