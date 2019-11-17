@@ -10,6 +10,7 @@ import os
 import re
 import random
 from pathlib import Path
+import argparse
 
 
 # from: https://www.tensorflow.org/alpha/tutorials/load_data/tf_records
@@ -145,17 +146,15 @@ def serialized_example(x, y):
     return example_proto.SerializeToString()
 
 
-def to_log_mel_spectro(samples, M):
+def to_log_mel_spectro(samples, m):
     samples = tf.reshape(samples, (-1,))
     stft = tf.signal.stft(samples, frame_length=512, frame_step=256)
     spectrogram = tf.abs(stft)
-    return tf.math.log(spectrogram @ M + 1e-6)
+    return tf.math.log(spectrogram @ m + 1e-6)
 
 
-def main():
-    #  valid mode choices 'samples', 'log-mel', 'mfcc'
-    DATA_TYPE = 'mfcc'
-    M = tf.signal.linear_to_mel_weight_matrix(
+def main(config):
+    m = tf.signal.linear_to_mel_weight_matrix(
         num_mel_bins=40,
         num_spectrogram_bins=257,
         sample_rate=16000,
@@ -165,7 +164,7 @@ def main():
     filenames = get_all_filenames()
     random.seed(0)
     random.shuffle(filenames)
-    writers = {mode: MyTFRWriter(data_type=DATA_TYPE, mode=mode)
+    writers = {mode: MyTFRWriter(data_type=config['ds_type'], mode=mode)
                for mode in ['train', 'val', 'test']}
     for filename in filenames:
         rawdata = tf.io.read_file(filename)
@@ -173,10 +172,10 @@ def main():
         if kw_samples.shape[0] != 16000:
             continue  # only load examples with exactly 16ksamples (i.e. 1second)
         x = kw_samples  # default to samples
-        if DATA_TYPE == 'log-mel':
-            x = to_log_mel_spectro(kw_samples, M)
-        elif DATA_TYPE == 'mfcc':
-            x = to_log_mel_spectro(kw_samples, M)
+        if config['ds_type'] == 'log-mel':
+            x = to_log_mel_spectro(kw_samples, m)
+        elif config['ds_type'] == 'mfcc':
+            x = to_log_mel_spectro(kw_samples, m)
             x = tf.signal.mfccs_from_log_mel_spectrograms(x)
         y = get_class_int(filename, class_dict)
         kw_split = which_set(filename)
@@ -187,4 +186,10 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
+    parser = argparse.ArgumentParser(description='Build TFRecords dataset.')
+    parser.add_argument(
+        '-ds', '--ds_type', type=str,
+        help='Choose "log-mel", "cpc-enc" or "samples".',
+        default='log-mel')
+
+    main(vars(parser.parse_args()))
