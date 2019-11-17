@@ -154,7 +154,7 @@ def to_log_mel_spectro(samples, M):
 
 def main():
     #  valid mode choices 'samples', 'log-mel', 'mfcc'
-    data_type = 'mfcc'
+    DATA_TYPE = 'mfcc'
     M = tf.signal.linear_to_mel_weight_matrix(
         num_mel_bins=40,
         num_spectrogram_bins=257,
@@ -165,7 +165,7 @@ def main():
     filenames = get_all_filenames()
     random.seed(0)
     random.shuffle(filenames)
-    writers = {mode: MyTFRWriter(data_type=data_type, mode=mode)
+    writers = {mode: MyTFRWriter(data_type=DATA_TYPE, mode=mode)
                for mode in ['train', 'val', 'test']}
     for filename in filenames:
         rawdata = tf.io.read_file(filename)
@@ -173,9 +173,9 @@ def main():
         if kw_samples.shape[0] != 16000:
             continue  # only load examples with exactly 16ksamples (i.e. 1second)
         x = kw_samples  # default to samples
-        if data_type == 'log-mel':
+        if DATA_TYPE == 'log-mel':
             x = to_log_mel_spectro(kw_samples, M)
-        elif data_type == 'mfcc':
+        elif DATA_TYPE == 'mfcc':
             x = to_log_mel_spectro(kw_samples, M)
             x = tf.signal.mfccs_from_log_mel_spectrograms(x)
         y = get_class_int(filename, class_dict)

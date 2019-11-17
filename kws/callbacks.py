@@ -1,5 +1,5 @@
 """
-Custom Keras callbacks for logging and checkpointing.
+Custom Keras callbacks for logging, checkpointing, and lr schedule.
 """
 import tensorflow as tf
 from tensorflow import keras

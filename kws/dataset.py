@@ -1,7 +1,7 @@
 """
 Construct tf.data.Dataset from processed Kaggle KWS data.
 
-TFRecords built by tfrecords.py.
+Use tfrecords.py to construct TFRecords.
 """
 import tensorflow as tf
 from pathlib import Path
@@ -25,9 +25,11 @@ def decode(example, ds_type):
         x = x / (scale + epsilon)
     elif ds_type in ['mfcc', 'log-mel']:
         x = tf.reshape(x, (61, 40, 1))
+        # magic numbers to roughly scale inputs to [-1, 1]
         x = tf.clip_by_value(x, -10.0, 5.0)
         x = (x + 2.5) / 7.5
     elif ds_type == 'cpc-enc':
+        # magic number to roughly scale inputs to [-1, 1]
         x = tf.reshape(x, (63, 40, 1)) / 4
     else:
         return None

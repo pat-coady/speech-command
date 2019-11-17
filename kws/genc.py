@@ -1,9 +1,9 @@
 """
 Contrastive Predictive Encoding encoder model from:
-https://gitlab.analog.com/PCoady/replearn
+https://github.com/pat-coady/contrast-pred-code
 
-Manually copied from repo because difficult to deal with custom package on
-MS Azure Hyperdrive.
+Not ideal, but manually copied model to this repo to make this project
+self-contained.
 """
 from tensorflow import keras
 from tensorflow.keras import backend
