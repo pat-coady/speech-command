@@ -1,6 +1,8 @@
 """
 Construct tf.data.Dataset from processed Kaggle KWS data.
 
+https://ai.googleblog.com/2017/08/launching-speech-commands-dataset.html
+
 Use tfrecords.py to construct TFRecords.
 """
 import tensorflow as tf
