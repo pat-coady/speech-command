@@ -153,8 +153,8 @@ def to_log_mel_spectro(samples, M):
 
 
 def main():
-    #  valid mode choices 'samples', 'log-mel-spec', 'mfcc'
-    data_type = 'log-mel-spec'
+    #  valid mode choices 'samples', 'log-mel', 'mfcc'
+    data_type = 'mfcc'
     M = tf.signal.linear_to_mel_weight_matrix(
         num_mel_bins=40,
         num_spectrogram_bins=257,
@@ -173,7 +173,7 @@ def main():
         if kw_samples.shape[0] != 16000:
             continue  # only load examples with exactly 16ksamples (i.e. 1second)
         x = kw_samples  # default to samples
-        if data_type == 'log-mel-spec':
+        if data_type == 'log-mel':
             x = to_log_mel_spectro(kw_samples, M)
         elif data_type == 'mfcc':
             x = to_log_mel_spectro(kw_samples, M)

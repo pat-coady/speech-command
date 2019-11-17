@@ -18,5 +18,5 @@ setup(
     version='1.0.0',
     description='Keyword detection.',
     packages=find_packages(exclude=['contrib', 'docs', 'tests']),
-    python_requires='>=3.6', install_requires=['numpy', 'tensorflow']
+    python_requires='>=3.6', install_requires=['numpy', 'tensorflow', 'azureml']
 )

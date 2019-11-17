@@ -2,16 +2,21 @@
 Models
 """
 from tensorflow import keras
-from replearn.models import genc_model
+from tensorflow.keras import backend
+from pathlib import Path
+
+from genc import genc_model
 
 
 def conv2d(x, filters):
+    """3x3 conv with relu activation."""
     y = keras.layers.Conv2D(filters, (3, 3), padding='same',
                             kernel_initializer='he_uniform')(x)
     return keras.activations.relu(y)
 
 
 def conv2d_bn(x, filters):
+    """3x3 conv with batchnorm and relu activation."""
     y = keras.layers.Conv2D(filters, (3, 3), padding='same',
                             kernel_initializer='he_uniform')(x)
     y = keras.layers.BatchNormalization()(y)
@@ -19,6 +24,7 @@ def conv2d_bn(x, filters):
 
 
 def pool(x):
+    """2x2 max pool."""
     return keras.layers.MaxPool2D((2, 2))(x)
 
 
@@ -31,6 +37,10 @@ def cnn(config):
         x = keras.Input(shape=(16000,), name='input')
         genc = genc_model(dim_z=40)
         y = genc(x)
+        if config['load_genc']:
+            genc.load_weights(str(Path.cwd() / 'genc.h5'))
+        if not config['train_genc']:
+            y = backend.stop_gradient(y)
         y = keras.layers.Reshape((-1, 40, 1))(y)
         y = keras.layers.Cropping2D(((5, 0), (0, 0)))(y)
         y = conv(y, 16)
@@ -49,7 +59,7 @@ def cnn(config):
     return keras.Model(x, y)
 
 
-def dense_conv(config):
+def tall_kernel(config):
     if config['ds_type'] == 'samples':
         x = keras.Input(shape=(16000,), name='input')
         genc = genc_model(dim_z=40)
@@ -60,7 +70,11 @@ def dense_conv(config):
                                 kernel_initializer='he_uniform',
                                 activation='relu')(y)
     else:
-        x = keras.Input(shape=(None, 40, 1), name='input')
+        # TODO: figure this out:
+        # ValueError: The last dimension of the inputs to `Dense` should be defined. Found `None`.
+        # had to assign first dimention of Input to fix it
+        h = 61 if config['ds_type'] == 'log-mel' else 63
+        x = keras.Input(shape=(h, 40, 1), name='input')
         y = keras.layers.Conv2D(80, (3, 40), (2, 1), padding='valid',
                                 kernel_initializer='he_uniform',
                                 activation='relu')(x)

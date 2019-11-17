@@ -23,12 +23,12 @@ def decode(example, ds_type):
         min_x = tf.reduce_min(x)
         scale = tf.maximum(-min_x, max_x)
         x = x / (scale + epsilon)
-    elif ds_type in ['mfcc', 'log-mel-spec']:
+    elif ds_type in ['mfcc', 'log-mel']:
         x = tf.reshape(x, (61, 40, 1))
         x = tf.clip_by_value(x, -10.0, 5.0)
         x = (x + 2.5) / 7.5
     elif ds_type == 'cpc-enc':
-        x = tf.reshape(x, (100, 40, 1)) / 2.5
+        x = tf.reshape(x, (63, 40, 1)) / 4
     else:
         return None
     y = tf.cast(example['y'], tf.int32)
@@ -36,15 +36,15 @@ def decode(example, ds_type):
     return x, y
 
 
-def build_filelist(ds_type, mode):
-    path = Path.home() / 'Data' / 'kws' / 'tfrecords' / ds_type
+def build_filelist(config, mode):
+    path = Path(config['data_dir']) / config['ds_type']
     filenames = path.rglob('{}_*.tfr'.format(mode))
 
     return list(map(lambda fn: str(fn), filenames))
 
 
 def build_dataset(config, mode):
-    filenames = build_filelist(config['ds_type'], mode)
+    filenames = build_filelist(config, mode)
     filenames.sort()  # deterministic ordering
     ds_filenames = tf.data.Dataset.from_tensor_slices(tf.constant(filenames))
 
