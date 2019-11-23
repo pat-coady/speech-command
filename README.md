@@ -2,7 +2,7 @@
 
 ### Overview
 
-This code implements a TensorFlow training pipeline for the [Google Speech Command Dataset](https://ai.googleblog.com/2017/08/launching-speech-commands-dataset.html) and establishes the baseline performance using a "vanilla" CNN. The motivation is to have an MNIST-like dataset, but for an audio classification task. The speech command dataset contains ~2,000 x 1 second recordings for each of 30 speech commands.
+This code implements a TensorFlow training pipeline for the [Google Speech Command Dataset](https://ai.googleblog.com/2017/08/launching-speech-commands-dataset.html) and establishes a simple baseline. The motivation is to have a MNIST-like dataset, but for an audio classification task. The speech command dataset contains ~2,000 x 1 second recordings for each of 30 words.
 
 **NOTE:** I just noticed a [pull request](https://github.com/tensorflow/datasets/pull/992) in the [tensorflow datasets GitHub repo](https://github.com/tensorflow/datasets) to add the speech command dataset. When that is merged, that will be a clean way to use this dataset in TensorFlow. 
 
@@ -64,7 +64,7 @@ Requirements
 
 See `setup.py`.
 
-Note: `azureml` is optional, only needed if you train using Azure ML Workspaces.
+Note: `azureml` is optional, and only needed if you train using Azure ML Workspaces.
 
 ### References
 
