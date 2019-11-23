@@ -103,8 +103,8 @@ if __name__ == "__main__":
         default=64)
     parser.add_argument(
         '--data_dir', type=str,
-        help='Path to training data (default = ~/Data/kws/tfrecords).',
-        default=str(Path.home() / 'Data' / 'kws' / 'tfrecords'))
+        help='Path to training data (default = ~/Data/speech_commands/tfrecords).',
+        default=str(str(Path.home() / 'Data' / 'speech_commands' / 'tfrecords')))
     parser.add_argument(
         '-ds', '--ds_type', type=str,
         help='Choose "log-mel", "cpc-enc" or "samples".',

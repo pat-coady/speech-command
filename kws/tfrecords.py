@@ -78,19 +78,20 @@ def which_set(filename, validation_percentage=10, testing_percentage=10):
 
 
 # Start of my code
-def get_all_filenames():
+def get_all_filenames(config):
     """Return list of all training files except '_background_noise_"""
-    path = Path.home() / 'Data' / 'kws' / 'train' / 'audio'
+    path = Path(config['data_dir'])
     filenames = path.rglob('*.wav')
     filenames = map(lambda fn: str(fn), filenames)
 
     return list(filter(lambda x: 'background' not in x, filenames))
 
 
-def build_class_dict():
+def build_class_dict(config):
     """Key = class (str), value = integer (0 to num_classes-1)."""
-    path = Path.home() / 'Data' / 'kws' / 'train' / 'audio'
+    path = Path(config['data_dir'])
     folders = path.glob('*')
+    folders = filter(lambda f: f.is_dir(), folders)
     folders = map(lambda x: x.stem, folders)
     folders = list(filter(lambda x: 'background' not in x, folders))
     folders.sort()
@@ -109,11 +110,11 @@ def get_class_int(filename, class_dict):
 
 
 class MyTFRWriter(object):
-    def __init__(self, data_type, mode, shard_size=256):
-        self.data_type = data_type
+    def __init__(self, config, mode, shard_size=256):
+        self.data_type = config['ds_type']
         self.mode = mode
         self.shard_size = shard_size
-        path = Path.home() / 'Data' / 'kws' / 'tfrecords' / data_type
+        path = Path(config['output_dir']) / config['ds_type']
         path.mkdir(parents=True, exist_ok=True)
         self.path = str(path)
         self.count = 0
@@ -160,11 +161,11 @@ def main(config):
         sample_rate=16000,
         lower_edge_hertz=40,
         upper_edge_hertz=8000)
-    class_dict = build_class_dict()
-    filenames = get_all_filenames()
+    class_dict = build_class_dict(config)
+    filenames = get_all_filenames(config)
     random.seed(0)
     random.shuffle(filenames)
-    writers = {mode: MyTFRWriter(data_type=config['ds_type'], mode=mode)
+    writers = {mode: MyTFRWriter(config, mode=mode)
                for mode in ['train', 'val', 'test']}
     for filename in filenames:
         rawdata = tf.io.read_file(filename)
@@ -188,8 +189,16 @@ def main(config):
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Build TFRecords dataset.')
     parser.add_argument(
-        '-ds', '--ds_type', type=str,
-        help='Choose "log-mel", "cpc-enc" or "samples".',
+        '--ds_type', type=str,
+        help='Choose "log-mel", "mfcc", or "samples".',
         default='log-mel')
+    parser.add_argument(
+        '--data_dir', type=str,
+        help='Path to training data (default = ~/Data/speech_commands_v0.01).',
+        default=str(Path.home() / 'Data' / 'speech_commands_v0.01'))
+    parser.add_argument(
+        '--output_dir', type=str,
+        help='Path to training data (default = ~/Data/speech_commands/tfrecords).',
+        default=str(Path.home() / 'Data' / 'speech_commands' / 'tfrecords'))
 
     main(vars(parser.parse_args()))
