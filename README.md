@@ -19,7 +19,7 @@ The script has an option to process the data in 3 ways (selected by `--ds_type` 
   - each example has shape = (61, 40, 1)
 - `mfcc` : mel-frequency cepstral coefficients, same settings at log-mel
 
-**Note:** The original speech command challenge used only 10 of the words from the dataset plus "silence" and "unknown" classes. Even though this is a smaller number of words, it is actually a more challenging task with a catch-all unknown class. 
+**Note:** The original speech command challenge used only 10 of the words from the dataset plus "silence" and "unknown" classes. Even though this is a smaller number of words, it is actually a more challenging (and realistic) task with a catch-all unknown class. 
 
 ### Default Model (`model.py`)
 
